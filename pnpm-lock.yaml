@@ -1,0 +1,67 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+  .:
+    dependencies:
+      '@astrojs/sitemap':
+        specifier: 3.7.3
+        version: 3.7.3
+      '@tailwindcss/vite':
+        specifier: 4.3.3
+        version: 4.3.3
+      astro:
+        specifier: 7.2.6
+        version: 7.2.6
+      tailwindcss:
+        specifier: 4.3.3
+        version: 4.3.3
+    devDependencies:
+      '@astrojs/check':
+        specifier: 0.9.10
+        version: 0.9.10(typescript@6.0.3)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      wrangler:
+        specifier: 4.125.0
+        version: 4.125.0
+
+packages:
+  '@astrojs/check@0.9.10':
+    resolution: {integrity: sha512-zgx/UQMozdjOa3bOxjgeCFdtpE3c9rRX6xHwa+2QXvy8z8Akifu2AtubHyv/zzC2znO8dl8fFWL4K+Ba9kS8HQ==}
+    hasBin: true
+    peerDependencies:
+      typescript: ^5.0.0 || ^6.0.0
+  '@astrojs/sitemap@3.7.3':
+    resolution: {integrity: sha512-f8euLVsyeAmAkSm/1M2Kb8sL8byQmfgbvBNaHFItCheTj/IpiJYSEWVcqDHZ/yEHxiS7+w87mQkzwZaPHmk5GA==}
+  '@tailwindcss/vite@4.3.3':
+    resolution: {}
+  astro@7.2.6:
+    resolution: {}
+    engines: {node: '>=22.12.0'}
+    hasBin: true
+  tailwindcss@4.3.3:
+    resolution: {}
+  typescript@6.0.3:
+    resolution: {}
+    engines: {node: '>=14.17'}
+    hasBin: true
+  wrangler@4.125.0:
+    resolution: {}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+
+snapshots:
+  '@astrojs/check@0.9.10(typescript@6.0.3)':
+    dependencies:
+      typescript: 6.0.3
+  '@astrojs/sitemap@3.7.3': {}
+  '@tailwindcss/vite@4.3.3': {}
+  astro@7.2.6: {}
+  tailwindcss@4.3.3: {}
+  typescript@6.0.3: {}
+  wrangler@4.125.0: {}

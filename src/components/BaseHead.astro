@@ -1,0 +1,22 @@
+---
+interface Props { title: string; description: string; path?: string; image?: string; }
+const { title, description, path='/', image='/logo.svg' } = Astro.props;
+const site = Astro.site;
+const canonical = site ? new URL(path, site).toString() : undefined;
+const ogImage = site ? new URL(image, site).toString() : image;
+---
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width" />
+<title>{title}</title>
+<meta name="description" content={description} />
+{canonical && <link rel="canonical" href={canonical} />}
+<meta property="og:type" content="website" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+{canonical && <meta property="og:url" content={canonical} />}
+<meta property="og:image" content={ogImage} />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+<link rel="icon" sizes="32x32" href="/icons/favicon-32.png" />
+<link rel="icon" sizes="16x16" href="/icons/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
