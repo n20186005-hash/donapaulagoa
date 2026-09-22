@@ -1,22 +1,43 @@
 ---
-interface Props { title: string; description: string; path?: string; image?: string; }
-const { title, description, path='/', image='/logo.svg' } = Astro.props;
+import { SITE_NAME, ATTRACTION_FULL_NAME, CITY_NAME } from '../data/site';
+interface Props {
+  title: string;
+  description: string;
+  path?: string;
+  image?: string;
+  imageAlt?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+}
+const { title, description, path = '/', image, imageAlt, ogTitle = title, ogDescription = description } = Astro.props;
 const site = Astro.site;
 const canonical = site ? new URL(path, site).toString() : undefined;
-const ogImage = site ? new URL(image, site).toString() : image;
+const ogImage = image ? (site ? new URL(image, site).toString() : image) : undefined;
+const resolvedAlt = imageAlt ?? `${ATTRACTION_FULL_NAME} in ${CITY_NAME}`;
 ---
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width" />
 <title>{title}</title>
 <meta name="description" content={description} />
 {canonical && <link rel="canonical" href={canonical} />}
+<meta name="theme-color" content="#072e33" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content={title} />
-<meta property="og:description" content={description} />
+<meta property="og:site_name" content={SITE_NAME} />
+<meta property="og:locale" content="en_IN" />
+<meta property="og:title" content={ogTitle} />
+<meta property="og:description" content={ogDescription} />
 {canonical && <meta property="og:url" content={canonical} />}
-<meta property="og:image" content={ogImage} />
+{ogImage && <meta property="og:image" content={ogImage} />}
+{ogImage && <meta property="og:image:alt" content={resolvedAlt} />}
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={ogTitle} />
+<meta name="twitter:description" content={ogDescription} />
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+{ogImage && <meta name="twitter:image:alt" content={resolvedAlt} />}
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
 <link rel="icon" sizes="32x32" href="/icons/favicon-32.png" />
 <link rel="icon" sizes="16x16" href="/icons/favicon-16.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content={SITE_NAME} />

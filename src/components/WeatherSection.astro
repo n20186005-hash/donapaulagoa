@@ -1,0 +1,256 @@
+---
+import { LATITUDE, LONGITUDE, CITY_NAME, ATTRACTION_FULL_NAME } from '../data/site';
+import { computeAdvice, wmoText, wmoIcon } from '../lib/weatherAdvice';
+
+/**
+ * Server-side (build-time) fetch of current conditions, a 7-day forecast and
+ * coastal sea state, then a visitor-facing advice is computed and rendered into
+ * static HTML. A bundled client script refreshes the same data live in the
+ * browser and recomputes the advice with the identical function. No API key or
+ * third-party identifier is shown to visitors.
+ */
+
+const FORECAST_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max&timezone=Asia/Kolkata&forecast_days=7`;
+const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=wave_height,sea_surface_temperature&timezone=Asia/Kolkata`;
+
+const round = (n?: number) => (typeof n === 'number' ? Math.round(n) : n);
+const hourNow = new Date().getHours();
+
+function pickMarine(mj: any) {
+  if (!mj?.hourly?.time) return null;
+  const hh = String(hourNow).padStart(2, '0') + ':00';
+  let i = mj.hourly.time.findIndex((t: string) => t.includes(hh));
+  if (i < 0) i = 0;
+  return {
+    waveHeight: typeof mj.hourly.wave_height?.[i] === 'number' ? mj.hourly.wave_height[i] : undefined,
+    seaTemp: typeof mj.hourly.sea_surface_temperature?.[i] === 'number' ? mj.hourly.sea_surface_temperature[i] : undefined
+  };
+}
+
+let now: any = null;
+let days: any[] = [];
+let marine: any = null;
+
+try {
+  const fc = await fetch(FORECAST_URL, { headers: { Accept: 'application/json' } });
+  if (fc.ok) {
+    const j = await fc.json();
+    if (j?.current) {
+      now = {
+        temp: round(j.current.temperature_2m),
+        apparent: round(j.current.apparent_temperature),
+        humidity: round(j.current.relative_humidity_2m),
+        code: j.current.weather_code,
+        isDay: j.current.is_day === 1,
+        wind: round(j.current.wind_speed_10m),
+        gust: round(j.current.wind_gusts_10m)
+      };
+    }
+    if (j?.daily?.time) {
+      days = (j.daily.time as string[]).map((d, i) => ({
+        date: d,
+        tmax: round(j.daily.temperature_2m_max[i]),
+        tmin: round(j.daily.temperature_2m_min[i]),
+        code: j.daily.weather_code[i],
+        text: wmoText(j.daily.weather_code[i]),
+        precip: j.daily.precipitation_probability_max?.[i] ?? 0,
+        uv: round(j.daily.uv_index_max?.[i]),
+        wind: round(j.daily.wind_speed_10m_max?.[i])
+      }));
+    }
+  }
+  const mc = await fetch(MARINE_URL, { headers: { Accept: 'application/json' } });
+  if (mc.ok) marine = pickMarine(await mc.json());
+} catch {
+  now = null;
+  days = [];
+  marine = null;
+}
+
+const day0 = days[0]
+  ? { tmax: days[0].tmax, tmin: days[0].tmin, precipProb: days[0].precip, uvMax: days[0].uv, windMax: days[0].wind }
+  : {};
+
+const advice = computeAdvice({ ...now, ...day0, waveHeight: marine?.waveHeight, seaTemp: marine?.seaTemp });
+
+function dayLabel(iso: string, i: number): string {
+  if (i === 0) return 'Today';
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
+}
+---
+
+<section id="weather" class="bg-[#eef6f4] py-20">
+  <div class="wrap">
+    <p class="eyebrow">Plan around the weather</p>
+    <h2 class="serif mt-3 text-4xl font-bold text-[#072e33]">Current conditions &amp; {CITY_NAME} forecast</h2>
+    <p class="mt-4 max-w-3xl leading-8 text-[#536969]">A quick read on whether it’s a good day at {ATTRACTION_FULL_NAME}, and exactly what to carry or avoid — worked out from the live conditions, not just a temperature.</p>
+
+    {advice.risks.length > 0 && (
+      <div id="wx-risk" class="mt-6 flex items-start gap-3 rounded-2xl border border-[#e7b7b0] bg-[#fbecea] px-5 py-4 text-[#8a2c1f]">
+        <span class="text-xl">⚠️</span>
+        <p class="font-semibold leading-7">{advice.risks.join(' ')}</p>
+      </div>
+    )}
+
+    <div class="mt-9 grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
+      <div class="card flex flex-col justify-between p-7">
+        <div>
+          <p class="text-sm font-semibold uppercase tracking-[.12em] text-[#8a9795]">Right now</p>
+          <div id="wx-now" class="mt-3 flex items-center gap-4">
+            {now ? (
+              <>
+                <span id="wx-now-icon" class="text-6xl leading-none">{wmoIcon(now.code, now.isDay)}</span>
+                <div>
+                  <b id="wx-now-temp" class="block text-5xl font-bold text-[#072e33]">{now.temp}°C</b>
+                  <span id="wx-now-text" class="text-[#5b6d6d]">{wmoText(now.code)}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <span class="text-6xl leading-none">🌡️</span>
+                <div><b class="block text-2xl font-bold text-[#072e33]">Loading…</b><span class="text-[#5b6d6d]">Fetching live conditions</span></div>
+              </>
+            )}
+          </div>
+          <dl id="wx-now-extra" class="mt-5 grid grid-cols-2 gap-3 text-sm">
+            {now && (
+              <>
+                <div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">Feels like</dt><dd class="font-bold text-[#072e33]">{now.apparent}°C</dd></div>
+                <div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">Wind</dt><dd class="font-bold text-[#072e33]">{now.wind} km/h</dd></div>
+                <div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">Humidity</dt><dd class="font-bold text-[#072e33]">{now.humidity}%</dd></div>
+                <div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">UV (today)</dt><dd class="font-bold text-[#072e33]">{day0.uvMax ?? '—'}</dd></div>
+              </>
+            )}
+            {typeof marine?.seaTemp === 'number' && (
+              <div class="rounded-xl bg-[#eaf3f4] p-3"><dt class="text-[#0f6870]">Sea temp</dt><dd class="font-bold text-[#072e33]">{Math.round(marine.seaTemp)}°C</dd></div>
+            )}
+            {typeof marine?.waveHeight === 'number' && (
+              <div class="rounded-xl bg-[#eaf3f4] p-3"><dt class="text-[#0f6870]">Waves</dt><dd class="font-bold text-[#072e33]">{marine.waveHeight.toFixed(1)} m</dd></div>
+            )}
+          </dl>
+        </div>
+      </div>
+
+      <div class="card p-7">
+        <p class="text-sm font-semibold uppercase tracking-[.12em] text-[#8a9795]">Next 7 days</p>
+        <ul id="wx-forecast" class="mt-4 divide-y divide-[#e2ece9]">
+          {days.length > 0 ? days.map((d, i) => (
+            <li class="flex items-center gap-4 py-3">
+              <span class="w-14 text-sm font-bold text-[#072e33]">{dayLabel(d.date, i)}</span>
+              <span class="text-2xl">{wmoIcon(d.code)}</span>
+              <span class="flex-1 text-sm text-[#536969]">{d.text}</span>
+              <span class="text-sm text-[#0f6870]">💧 {d.precip}%</span>
+              <span class="w-24 text-right text-sm font-semibold text-[#072e33]">{d.tmax}° / {d.tmin}°</span>
+            </li>
+          )) : (
+            <li class="py-3 text-sm text-[#5b6d6d]">Loading forecast…</li>
+          )}
+        </ul>
+      </div>
+    </div>
+
+    <div id="wx-advice" class="mt-8 grid gap-5 md:grid-cols-3">
+      <div class="card p-6"><h3 class="text-sm font-bold uppercase tracking-[.1em] text-[#0f6870]">What to wear</h3><ul class="mt-3 space-y-2 text-sm leading-6 text-[#536969]">{advice.dress.map((s) => <li>• {s}</li>)}</ul></div>
+      <div class="card p-6"><h3 class="text-sm font-bold uppercase tracking-[.1em] text-[#0f6870]">How to plan your visit</h3><ul class="mt-3 space-y-2 text-sm leading-6 text-[#536969]">{advice.plan.map((s) => <li>• {s}</li>)}</ul></div>
+      <div class="card p-6"><h3 class="text-sm font-bold uppercase tracking-[.1em] text-[#0f6870]">What to bring</h3><ul class="mt-3 space-y-2 text-sm leading-6 text-[#536969]">{advice.items.map((s) => <li>• {s}</li>)}</ul></div>
+    </div>
+
+    <p id="wx-status" class="mt-4 text-xs text-[#6a7775]">{now ? 'Build-time snapshot' : 'Live data loads in your browser'}</p>
+  </div>
+</section>
+
+<script>
+import { computeAdvice, wmoText, wmoIcon } from '../lib/weatherAdvice';
+
+const LAT = 15.4551, LON = 73.7967;
+const FORECAST_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max&timezone=Asia/Kolkata&forecast_days=7`;
+const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&hourly=wave_height,sea_surface_temperature&timezone=Asia/Kolkata`;
+const KEY = 'dp-wx-cache';
+const round = (n?: number) => (typeof n === 'number' ? Math.round(n) : n);
+const hourNow = new Date().getHours();
+
+function dayLabel(iso: string, i: number): string {
+  if (i === 0) return 'Today';
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
+}
+function pickMarine(mj: any) {
+  if (!mj?.hourly?.time) return null;
+  const hh = String(hourNow).padStart(2, '0') + ':00';
+  let i = mj.hourly.time.findIndex((t: string) => t.includes(hh));
+  if (i < 0) i = 0;
+  return {
+    waveHeight: typeof mj.hourly.wave_height?.[i] === 'number' ? mj.hourly.wave_height[i] : undefined,
+    seaTemp: typeof mj.hourly.sea_surface_temperature?.[i] === 'number' ? mj.hourly.sea_surface_temperature[i] : undefined
+  };
+}
+
+function render(j: any, marine: any) {
+  const now = j.current;
+  const d0 = j.daily;
+  const day0 = d0 ? {
+    tmax: round(d0.temperature_2m_max?.[0]), tmin: round(d0.temperature_2m_min?.[0]),
+    precipProb: d0.precipitation_probability_max?.[0] ?? 0, uvMax: round(d0.uv_index_max?.[0]), windMax: round(d0.wind_speed_10m_max?.[0])
+  } : {};
+  const adv = computeAdvice({
+    temp: round(now.temperature_2m), code: now.weather_code, isDay: now.is_day === 1,
+    wind: round(now.wind_speed_10m), gust: round(now.wind_gusts_10m),
+    humidity: round(now.relative_humidity_2m), apparent: round(now.apparent_temperature),
+    ...day0, waveHeight: marine?.waveHeight, seaTemp: marine?.seaTemp
+  });
+
+  const nowEl = document.getElementById('wx-now');
+  if (nowEl) {
+    nowEl.innerHTML = `<span id="wx-now-icon" class="text-6xl leading-none">${wmoIcon(now.weather_code, now.is_day === 1)}</span><div><b id="wx-now-temp" class="block text-5xl font-bold text-[#072e33]">${Math.round(now.temperature_2m)}°C</b><span id="wx-now-text" class="text-[#5b6d6d]">${wmoText(now.weather_code)}</span></div>`;
+  }
+  const extra = document.getElementById('wx-now-extra');
+  if (extra) {
+    let h = `<div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">Feels like</dt><dd class="font-bold text-[#072e33]">${Math.round(now.apparent_temperature)}°C</dd></div><div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">Wind</dt><dd class="font-bold text-[#072e33]">${Math.round(now.wind_speed_10m)} km/h</dd></div><div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">Humidity</dt><dd class="font-bold text-[#072e33]">${Math.round(now.relative_humidity_2m)}%</dd></div><div class="rounded-xl bg-[#f4f8f7] p-3"><dt class="text-[#8a9795]">UV (today)</dt><dd class="font-bold text-[#072e33]">${round(d0.uv_index_max?.[0]) ?? '—'}</dd></div>`;
+    if (typeof marine?.seaTemp === 'number') h += `<div class="rounded-xl bg-[#eaf3f4] p-3"><dt class="text-[#0f6870]">Sea temp</dt><dd class="font-bold text-[#072e33]">${Math.round(marine.seaTemp)}°C</dd></div>`;
+    if (typeof marine?.waveHeight === 'number') h += `<div class="rounded-xl bg-[#eaf3f4] p-3"><dt class="text-[#0f6870]">Waves</dt><dd class="font-bold text-[#072e33]">${marine.waveHeight.toFixed(1)} m</dd></div>`;
+    extra.innerHTML = h;
+  }
+
+  const risk = document.getElementById('wx-risk');
+  if (risk) risk.innerHTML = `<span class="text-xl">⚠️</span><p class="font-semibold leading-7">${adv.risks.join(' ')}</p>`;
+  const riskBox = document.getElementById('wx-risk');
+  if (riskBox) (riskBox as HTMLElement).style.display = adv.risks.length ? 'flex' : 'none';
+
+  const fc = document.getElementById('wx-forecast');
+  if (fc && d0) {
+    fc.innerHTML = d0.time.map((d: string, i: number) => {
+      const c = d0.weather_code[i], tmax = Math.round(d0.temperature_2m_max[i]), tmin = Math.round(d0.temperature_2m_min[i]), p = d0.precipitation_probability_max?.[i] ?? 0;
+      return `<li class="flex items-center gap-4 py-3"><span class="w-14 text-sm font-bold text-[#072e33]">${dayLabel(d, i)}</span><span class="text-2xl">${wmoIcon(c)}</span><span class="flex-1 text-sm text-[#536969]">${wmoText(c)}</span><span class="text-sm text-[#0f6870]">💧 ${p}%</span><span class="w-24 text-right text-sm font-semibold text-[#072e33]">${tmax}° / ${tmin}°</span></li>`;
+    }).join('');
+  }
+
+  const advEl = document.getElementById('wx-advice');
+  if (advEl) {
+    advEl.innerHTML = `
+      <div class="card p-6"><h3 class="text-sm font-bold uppercase tracking-[.1em] text-[#0f6870]">What to wear</h3><ul class="mt-3 space-y-2 text-sm leading-6 text-[#536969]">${adv.dress.map((s: string) => `<li>• ${s}</li>`).join('')}</ul></div>
+      <div class="card p-6"><h3 class="text-sm font-bold uppercase tracking-[.1em] text-[#0f6870]">How to plan your visit</h3><ul class="mt-3 space-y-2 text-sm leading-6 text-[#536969]">${adv.plan.map((s: string) => `<li>• ${s}</li>`).join('')}</ul></div>
+      <div class="card p-6"><h3 class="text-sm font-bold uppercase tracking-[.1em] text-[#0f6870]">What to bring</h3><ul class="mt-3 space-y-2 text-sm leading-6 text-[#536969]">${adv.items.map((s: string) => `<li>• ${s}</li>`).join('')}</ul></div>`;
+  }
+  const st = document.getElementById('wx-status');
+  if (st) st.textContent = 'Live · updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function load() {
+  try {
+    const cached = sessionStorage.getItem(KEY);
+    if (cached) {
+      const { t, j, m } = JSON.parse(cached);
+      if (Date.now() - t < 30 * 60 * 1000) { render(j, m); const st = document.getElementById('wx-status'); if (st) st.textContent = 'Live · cached'; return; }
+    }
+    const [fr, mr] = await Promise.all([
+      fetch(FORECAST_URL, { headers: { Accept: 'application/json' } }),
+      fetch(MARINE_URL, { headers: { Accept: 'application/json' } }).catch(() => null)
+    ]);
+    if (!fr.ok) return;
+    const j = await fr.json();
+    const m = mr && mr.ok ? await mr.json().then(pickMarine).catch(() => null) : null;
+    sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), j, m }));
+    render(j, m);
+  } catch { /* keep build-time snapshot if live fetch fails */ }
+}
+load();
+</script>
