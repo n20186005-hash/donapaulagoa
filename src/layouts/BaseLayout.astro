@@ -11,15 +11,8 @@ interface Props {
   imageAlt?: string;
   ogTitle?: string;
   ogDescription?: string;
+  noindex?: boolean;
 }
-const { title, description, path = '/', image, imageAlt, ogTitle, ogDescription } = Astro.props;
+const { title, description, path = '/', image, imageAlt, ogTitle, ogDescription, noindex = false } = Astro.props;
 ---
-<!doctype html><html lang="en-IN"><head><BaseHead {title} {description} {path} {image} {imageAlt} {ogTitle} {ogDescription} /></head><body><Header/><main><slot /></main><Footer/><script is:inline>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
-</script><script is:inline>
-(()=>{const GA='G-HXM22WWPKP';const k='dp-cookie-preferences';let p;try{p=JSON.parse(localStorage.getItem(k)||'{}')}catch{}if(p?.analytics===true&&!window.__dpGaLoaded){window.__dpGaLoaded=true;const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+GA;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config',GA,{anonymize_ip:true});}})();
-</script></body></html>
+<!doctype html><html lang="en-IN"><head><BaseHead {title} {description} {path} {image} {imageAlt} {ogTitle} {ogDescription} {noindex} /></head><body><Header/><a class="skip-link" href="#content">Skip to content</a><main id="content"><slot /></main><Footer/><script src="/consent.js" is:inline defer></script><script src="/retire-offline.js" is:inline defer></script></body></html>

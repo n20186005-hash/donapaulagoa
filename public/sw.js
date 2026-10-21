@@ -1,58 +1,8 @@
-/* Dona Paula View Point Guide — minimal PWA service worker.
- * Pages: network-first with a cache fallback (fresh content, offline-safe).
- * Static assets: cache-first with network refresh.
- * Version bump to invalidate old caches after an update. */
-const VERSION = 'dp-v1';
-const PAGE_CACHE = `${VERSION}-pages`;
-const ASSET_CACHE = `${VERSION}-assets`;
-const PRECACHE = ['/', '/index.html', '/site.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(PAGE_CACHE).then((cache) => cache.addAll(PRECACHE).catch(() => {}))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  if (request.method !== 'GET') return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy));
-          return res;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html')))
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((res) => {
-        if (res.ok && (res.type === 'basic' || res.type === 'default')) {
-          const copy = res.clone();
-          caches.open(ASSET_CACHE).then((cache) => cache.put(request, copy));
-        }
-        return res;
-      });
-    })
-  );
-});
+// Retire the guide's legacy offline cache without touching other origin caches.
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => event.waitUntil((async () => {
+ const names = await caches.keys();
+ await Promise.all(names.filter(name => /^dp-v\d+-(pages|assets)$/.test(name)).map(name => caches.delete(name)));
+ await self.registration.unregister();
+ await self.clients.claim();
+})()));

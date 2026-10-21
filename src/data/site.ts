@@ -39,10 +39,9 @@ export const COUNTRY_CODE_2LETTER = 'IN';
 export const POSTAL_CODE = '403004';
 
 export const STREET_ADDRESS = 'Dona Paula Jetty Road, Dona Paula';
-export const PLUS_CODE = 'FR23+65 Dona Paula Jetty, Goa, India';
 
-export const LATITUDE = 15.45512766222106;
-export const LONGITUDE = 73.79666298030841;
+export const LATITUDE = 15.4506125;
+export const LONGITUDE = 73.8029961;
 
 export const CATEGORY = 'Tourist attraction';
 
@@ -53,7 +52,7 @@ export const MAPS_SHARE_URL = 'https://maps.app.goo.gl/V25C3ovRDJkMbFJK6';
 
 /** Google Maps embed src used by the location iframe. */
 export const MAPS_EMBED_SRC =
-	'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d27399.503126676595!2d73.79666298030841!3d15.45512766222106!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bbfc72e8d006fb5%3A0x830d8e7a119709e!2sDona%20Paula%20View%20Point!5e1!3m2!1sen!2sin!4v1787621315277!5m2!1sen!2sin&hl=en&region=IN';
+  'https://www.google.com/maps?q=15.4506125,73.8029961&z=16&output=embed';
 
 /** Google Maps search deep link (maps URL API). */
 export const MAPS_SEARCH_URL =
@@ -61,15 +60,15 @@ export const MAPS_SEARCH_URL =
 
 // --- Rating snapshot ----------------------------------------------------
 
-/** Google Maps rating snapshot, synchronised September 2026. */
+/** Google Maps rating snapshot, checked 20 October 2026. */
 export const RATING_VALUE = 4.1;
-export const RATING_COUNT = 50292;
-export const RATING_SYNC = 'Google Maps listing, synchronised September 2026';
+export const RATING_COUNT = 50489;
+export const RATING_SYNC = 'Google Maps listing, checked 20 October 2026';
 
 // --- Visitor-facing facts (subject to change) ---------------------------
 
 export const OPENING_HOURS = '08:00–22:00';
-export const LISTED_FEE = '₹50';
+export const LISTED_FEE = 'Confirm current jetty tariff';
 export const TYPICAL_VISIT_LENGTH = '45–60 minutes';
 
 // --- Semantic cluster ---------------------------------------------------
