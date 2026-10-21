@@ -1,2 +1,1 @@
-Licensed real photographs are referenced remotely in src/styles/global.css.
-See the root README.md for source/licence notes and the recommended local-materialisation step before production publication.
+Historical photograph: Dona Paula, Goa by Binobose (Bino Bose), 24 October 2014, CC BY-SA 4.0. Original SHA1: 2d01a4e95175077b2ad6be798bb52a3c9cf4514d. Source: https://commons.wikimedia.org/wiki/File:Dona_Paula,_Goa.jpg . Full attribution, licence and display modifications are visibly linked in /#photo-credits. hero.jpg and og-cover.jpg are graphic brand illustrations.
