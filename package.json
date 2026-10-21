@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "check": "astro check",
+    "test:worker": "node tests/worker-assets.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "deploy": "pnpm build && wrangler deploy"

@@ -10,9 +10,14 @@ export default {
    url.pathname = url.pathname.slice(0, -10) || '/';
    return Response.redirect(url.href, 301);
   }
-  const response = await env.ASSETS.fetch(request);
-  if (response.status !== 404) return response;
+  const isErrorAlias = ['/404', '/404/', '/404.html'].includes(url.pathname);
+  // Read the error document without the Assets HTML-normalization redirects.
+  const assetRequest = isErrorAlias
+   ? new Request(new URL('/404', url), request)
+   : request;
+  const response = await env.ASSETS.fetch(assetRequest);
+  if (!isErrorAlias && response.status !== 404) return response;
   const headers = new Headers(response.headers); headers.set('X-Robots-Tag', 'noindex');
-  return new Response(response.body, {status:404, headers});
+  return new Response(request.method === 'HEAD' ? null : response.body, {status:404, headers});
  }
 };
